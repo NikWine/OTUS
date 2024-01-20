@@ -3,106 +3,81 @@
 #include <string.h>
 #include <ctype.h>
 
-#define TABLE_SIZE 10007 // Простое число для размера хеш-таблицы
+#define TABLE_SIZE 10007  // Простое число для размера хеш-таблицы
 
-/* Структура для хранения пары ключ (слово) - значение (частота) */
+// Узел для хранения пар ключ-значение
 typedef struct HashNode {
     char *key;
     int value;
-    struct HashNode *next;
 } HashNode;
 
-/* Функция для создания нового узла */
+// Дубликат строки
 char* my_strdup(const char *src) {
-    size_t len = strlen(src) + 1; // Длина строки + 1 для нуль-терминатора
+    size_t len = strlen(src) + 1; 
     char *dst = malloc(len);
     if (dst == NULL) return NULL;
-    memcpy(dst, src, len); // Используем memcpy, чтобы скопировать len символов
+    memcpy(dst, src, len); 
     return dst;
 }
-HashNode* new_hashnode(const char *key, int value) {
-    HashNode *node = (HashNode *)malloc(sizeof(HashNode));
-    if (node == NULL) {
-        // Не забывайте проверять, удалось ли выделить память для узла.
-        fprintf(stderr, "Ошибка при выделении памяти для нового узла.\n");
-        return NULL;
-    }
-    node->key = my_strdup(key); // Здесь использована функция my_strdup вместо strdup
-    if (node->key == NULL) {
-        // Если strdup вернул NULL, нужно освободить уже выделенную память для узла.
-        fprintf(stderr, "Ошибка при копировании ключа.\n");
-        free(node);
-        return NULL;
-    }
-    node->value = value;
-    node->next = NULL;
-    return node;
-}
 
-/* Функция для создания хеш-таблицы */
-HashNode** create_hashtable() {
-    HashNode **hashtable = (HashNode **)calloc(TABLE_SIZE, sizeof(HashNode *));
+// Создание хеш-таблицы
+HashNode* create_hashtable() {
+    HashNode *hashtable = (HashNode *)calloc(TABLE_SIZE, sizeof(HashNode)); // Выделение памяти для хеш-таблицы и инициализация нулями
     return hashtable;
 }
 
-/* Хеш-функция */
+// Хеш-функция
 unsigned int hash(const char *key) {
     unsigned int value = 0;
     for (; *key; key++) {
-        value = value * 37 + *key;
+        value = value * 37 + *key; // Простое умножение и сложение для хеширования
     }
-    return value % TABLE_SIZE;
+    return value % TABLE_SIZE; // Простая функция хеширования, сокращает хеш до размера таблицы
 }
 
-/* Функция для вставки в хеш-таблицу */
-void insert(HashNode **hashtable, const char *key) {
-    unsigned int index = hash(key);
-    HashNode *node = hashtable[index];
+// Вставка в хеш-таблицу
+void insert(HashNode *hashtable, const char *key) {
+    unsigned int index = hash(key);  // Вычисление индекса
+    HashNode *node = &hashtable[index];
 
     // Проверяем, существует ли уже такой ключ
-    while (node) {
-        if (strcmp(node->key, key) == 0) {
+    while (node->key != NULL) {
+        if (strcmp(node->key, key) == 0) {  // Если ключи совпадают, увеличиваем значение
             node->value++;
             return;
         }
-        node = node->next;
+        index = (index + 1) % TABLE_SIZE;  // Иначе, переходим к следующему ячейку
+        node = &hashtable[index];
     }
 
-    // Если такого ключа не было, создаем новый узел
-    node = new_hashnode(key, 1);
-    node->next = hashtable[index];
-    hashtable[index] = node;
+    // Если такого ключа нет, создаем новый узел
+    node->key = my_strdup(key);
+    node->value = 1;
 }
 
-/* Функция для освобождения памяти хеш-таблицы */
-void free_hashtable(HashNode **hashtable) {
+// Освобождение памяти для хеш-таблицы
+void free_hashtable(HashNode *hashtable) {
     for (int i = 0; i < TABLE_SIZE; i++) {
-        HashNode *node = hashtable[i];
-        while (node) {
-            HashNode *temp = node;
-            node = node->next;
-            free(temp->key);
-            free(temp);
-        }
+        HashNode *node = &hashtable[i];
+        free(node->key); // Освобождение памяти для ключей
     }
     free(hashtable);
 }
 
-/* Функция подсчета слов */
-void count_words(FILE *file, HashNode **hashtable) {
+// Функция подсчета слов
+void count_words(FILE *file, HashNode *hashtable) {
     char buffer[256];
     while (fscanf(file, "%s", buffer) == 1) {
-        // Приведение слова к нижнему регистру
-        for (char *p = buffer; *p; ++p) *p = tolower((unsigned char)*p);
-        insert(hashtable, buffer);
+        for (char *p = buffer; *p; ++p) *p = tolower((unsigned char)*p); // Приведение в нижний регистр
+        insert(hashtable, buffer); // Вставка слова в хеш-таблицу
     }
 }
 
-/* Функция вывода результата */
-void display(HashNode **hashtable) {
+// Вывод результата
+void display(HashNode *hashtable) {
     for (int i = 0; i < TABLE_SIZE; i++) {
-        for (HashNode *node = hashtable[i]; node; node = node->next) {
-            printf("%s: %d\n", node->key, node->value);
+        if (hashtable[i].key != NULL) {
+            printf("%s: %d\n", hashtable[i].key, hashtable[i].value);
         }
     }
 }
@@ -119,7 +94,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    HashNode **hashtable = create_hashtable();
+    HashNode *hashtable = create_hashtable();
 
     count_words(file, hashtable);
 
@@ -130,4 +105,3 @@ int main(int argc, char **argv) {
     fclose(file);
     return 0;
 }
-
