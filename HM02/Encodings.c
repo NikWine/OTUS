@@ -1,16 +1,18 @@
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 /* Прототипы функций */
-void convert_koi8r_to_utf8(const unsigned char *input, char *output);
-void convert(const char* encoding, const char* input, char* output);
-void convert_iso8859_5_to_utf8(const char* input, char* output);
 void convert_cp1251_to_utf8(const char* input, char* output);
-int unicode_to_utf8(unsigned int codepoint, unsigned char *output);
-void convert_cp1251_to_utf8(const char* input, char* output) {
-  static const char *cp1251_utf8[128] = {
+void convert_koi8r_to_utf8(const unsigned char* input, char* output);
+void convert_iso8859_5_to_utf8(const char* input, char* output);
+int unicode_to_utf8(unsigned int codepoint, unsigned char* output);
+
+// Таблица преобразования из CP1251 в UTF8
+static const char* cp1251_utf8_table[128] = {
     // 0x80 -> 0x8F
     "\xE2\x82\xAC", "\xC2\x81", "\xE2\x80\x9A", "\xC6\x92", "\xE2\x80\x9E", "\xE2\x80\xA6", "\xE2\x80\xA0", "\xE2\x80\xA1",
     "\xCB\x86", "\xE2\x80\xB0", "\xE2\x80\xB9", "\xE2\x82\xAC", "\xC2\x8C", "\xC2\x8A", "\xC2\x8B", "\xC2\x8F",
@@ -37,24 +39,8 @@ void convert_cp1251_to_utf8(const char* input, char* output) {
     "\xD1\x88", "\xD1\x89", "\xD1\x8A", "\xD1\x8B", "\xD1\x8C", "\xD1\x8D", "\xD1\x8E", "\xD1\x8F"
 };
 
-   unsigned char c;
-   while ((c = *input++) != 0) {
-       if (c < 0x80) {
-           *output++ = c;
-       } else {
-           const char* utf8_seq = cp1251_utf8[c - 0x80];
-           while (*utf8_seq) {
-               *output++ = *utf8_seq++;
-           }
-       }
-   }
-   *output++ = 0;
-}
-
-// реализация convert_koi8r_to_utf8
-void convert_koi8r_to_utf8(const unsigned char *input, char *output) {
-   static const char *koi8r_utf8[256] = {
-    "\x00", "\x01", "\x02", "\x03", "\x04", "\x05", "\x06", "\x07",
+// Таблица преобразования из KOI8-R в UTF8
+static const char* koi8r_utf8_table[256] = {"\x00", "\x01", "\x02", "\x03", "\x04", "\x05", "\x06", "\x07",
     "\x08", "\x09", "\x0a", "\x0b", "\x0c", "\x0d", "\x0e", "\x0f",
     "\x10", "\x11", "\x12", "\x13", "\x14", "\x15", "\x16", "\x17",
     "\x18", "\x19", "\x1a", "\x1b", "\x1c", "\x1d", "\x1e", "\x1f",
@@ -86,27 +72,10 @@ void convert_koi8r_to_utf8(const unsigned char *input, char *output) {
 "\xD0\xAE", "\xD0\x90", "\xD0\x91", "\xD0\xA6", "\xD0\x94", "\xD0\x95", "\xD0\xA4", "\xD0\x93",
 "\xD0\xA5", "\xD0\x98", "\xD0\x99", "\xD0\x9A", "\xD0\x9B", "\xD0\x9C", "\xD0\x9D", "\xD0\x9E",
 "\xD0\x9F", "\xD0\xAF", "\xD0\xA0", "\xD0\xA1", "\xD0\xA2", "\xD0\xA3", "\xD0\x96", "\xD0\x92",
-"\xD0\xAC", "\xD0\xAB", "\xD0\x97", "\xD0\xA8", "\xD0\xAD", "\xD0\xA9", "\xD0\xA7", "\xD0\xAA"
-};
+"\xD0\xAC", "\xD0\xAB", "\xD0\x97", "\xD0\xA8", "\xD0\xAD", "\xD0\xA9", "\xD0\xA7", "\xD0\xAA"};
 
-  while (*input) { // Перебираем входной массив пока не встретим нулевой символ
-        const char *utf8_seq = koi8r_utf8[*input]; // Замена на правильный доступ к элементу массива
-
-        // Копируем последовательность UTF-8 в выходной массив
-        while (*utf8_seq) {
-            *output++ = *utf8_seq++;
-        }
-
-        input++; // Переходим к следующему символу
-    }
-
-    // Добавляем нулевой символ к концу выходной строки
-    *output = '\0';
-}
-
-// Полная реализация convert_iso8859_5_to_utf8
-void convert_iso8859_5_to_utf8(const char* input, char* output) {
-unsigned short iso_8859_5_to_utf8[256] = {
+// Таблица преобразования из ISO-8859-5 в UTF8
+static const unsigned short iso_8859_5_table[256] = {
     // 0x00-0x7F: Basic Latin (identical to Unicode)
     0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
     0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
@@ -144,13 +113,59 @@ unsigned short iso_8859_5_to_utf8[256] = {
     0x0448, 0x0449, 0x044A, 0x044B, 0x044C, 0x044D, 0x044E, 0x044F,
     0x2116, 0x0451, 0x0452, 0x0453, 0x0454, 0x0455, 0x0456, 0x0457,
     0x0458, 0x0459, 0x045A, 0x045B, 0x045C, 0x00A7, 0x045E, 0x045F
-};
+    };
 
+// Конвертирует строку из кодировки CP1251 в UTF-8.
+void convert_cp1251_to_utf8(const char* input, char* output) {
+    unsigned char c;
+    // Проходим по каждому символу входной строки.
+    while ((c = (unsigned char)*input++)) {
+        // Если код символа меньше 128, символ остается прежним.
+        if (c < 0x80) {
+            *output++ = c;
+        } else {
+            // В противном случае мы смотрим на таблицу преобразования cp1251_utf8_table
+            // для получения соответствующей последовательности UTF-8.
+            const char* utf8_seq = cp1251_utf8_table[c - 0x80];
+            // Копируем полученную последовательность UTF-8 в выходной буфер.
+            while (*utf8_seq) {
+                *output++ = *utf8_seq++;
+            }
+        }
+    }
+    *output = 0; // Добавляем нулевой символ в конце строки.
+}
+
+// Конвертирует строку из кодировки KOI8-R в UTF-8.
+void convert_koi8r_to_utf8(const unsigned char* input, char* output) {
+    // Проходим по каждому символу входной строки.
+    while (*input) {
+        // Смотрим на таблицу преобразования koi8r_utf8_table 
+        // для получения соответствующей последовательности UTF-8.
+        const char* utf8_seq = koi8r_utf8_table[*input];
+        // Копируем полученную последовательность UTF-8 в выходной буфер.
+        while (*utf8_seq) {
+            *output++ = *utf8_seq++;
+        }
+
+        input++;
+    }
+
+    *output = '\0'; // Добавляем нулевой символ в конце строки.
+}
+
+// Конвертирует строку из кодировки ISO-8859-5 в UTF-8.
+void convert_iso8859_5_to_utf8(const char* input, char* output) {
     size_t j = 0;
     for (size_t i = 0; input[i] != '\0'; i++) {
-        unsigned short unicode = iso_8859_5_to_utf8[(unsigned char)input[i]];
-       j += unicode_to_utf8(unicode, (unsigned char *)&output[j]);
+        // Смотрим на таблицу преобразования iso_8859_5_table 
+        // для получения соответствующего Unicode кода.    
+        unsigned short unicode = iso_8859_5_table[(unsigned char)input[i]];
+        // Затем преобразуем полученный Unicode код в UTF-8
+        // и добавляем его в выходной буфер.
+        j += unicode_to_utf8(unicode, (unsigned char*)&output[j]);
     }
+    output[j] = '\0'; // Добавляем нулевой символ в конце строки.
 }
 
 // Полная реализация unicode_to_utf8
@@ -158,60 +173,66 @@ int unicode_to_utf8(unsigned int codepoint, unsigned char *output) {
     if (output == NULL) {
         return 0;
     }
-
     if (codepoint <= 0x7F) {
-        // 1 байт
+        // 1 byte
         output[0] = (uint8_t)codepoint;
         return 1;
-    } else if (codepoint <= 0x7FF) {
-        // 2 байта
+    }
+    else if (codepoint <= 0x7FF) {
+        // 2 bytes
         output[0] = 0xC0 | ((codepoint >> 6) & 0x1F);
         output[1] = 0x80 | (codepoint & 0x3F);
         return 2;
-    } else if (codepoint <= 0xFFFF) {
-        // 3 байта
+    }
+    else if (codepoint <= 0xFFFF) {
+        // 3 bytes
         output[0] = 0xE0 | ((codepoint >> 12) & 0x0F);
         output[1] = 0x80 | ((codepoint >> 6) & 0x3F);
         output[2] = 0x80 | (codepoint & 0x3F);
         return 3;
-    } else if (codepoint <= 0x10FFFF) {
-        // 4 байта
+    }
+    else if (codepoint <= 0x10FFFF) {
+        // 4 bytes
         output[0] = 0xF0 | ((codepoint >> 18) & 0x07);
         output[1] = 0x80 | ((codepoint >> 12) & 0x3F);
         output[2] = 0x80 | ((codepoint >> 6) & 0x3F);
         output[3] = 0x80 | (codepoint & 0x3F);
         return 4;
-    } else {
-        // Кодовая точка за пределами диапазона Unicode
+    }
+    else {
+        // Кодовая точка находится за пределами допустимого диапазона Юникода.
         return 0;
     }
 }
 
-// На основе указанной кодировки выбирает и вызывает соответствующую функцию конвертации
+// Функция convert определяет кодировку и запускает соответствующую функцию конвертации
 void convert(const char* encoding, const char* input, char* output) {
     if (strcmp(encoding, "CP1251") == 0) {
-        convert_cp1251_to_utf8(input, output);
+        convert_cp1251_to_utf8(input, output);  // вызов функции конвертации из CP1251 в UTF-8
     } else if (strcmp(encoding, "KOI8-R") == 0) {
-        convert_koi8r_to_utf8((const unsigned char *)input, output);
+        convert_koi8r_to_utf8((const unsigned char *)input, output);  // вызов функции конвертации из KOI8-R в UTF-8
     } else if (strcmp(encoding, "ISO-8859-5") == 0) {
-        convert_iso8859_5_to_utf8(input, output);
+        convert_iso8859_5_to_utf8(input, output);  // вызов функции конвертации из ISO-8859-5 в UTF-8
     } else {
-        fprintf(stderr, "Неизвестная кодировка: %s\n", encoding);
+        fprintf(stderr, "Неизвестная кодировка: %s\n", encoding); // если кодировка неизвестна, выводим сообщение об ошибке
     }
 }
 
 int main(int argc, char* argv[]) {
+    // Проверяем, корректно ли количество переданных аргументов
     if (argc != 4) {
         fprintf(stderr, "Использование: %s <кодировка> <входной файл> <выходной файл>\n", argv[0]);
         return 1;
     }
 
+    // Открываем входной файл
     FILE* input_file = fopen(argv[2], "rb");
     if (!input_file) {
         perror("Не удалось открыть входной файл");
         return 1;
     }
 
+    // Открываем выходной файл
     FILE* output_file = fopen(argv[3], "wb");
     if (!output_file) {
         perror("Не удалось открыть выходной файл");
@@ -219,11 +240,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Считывание входного файла в строку
-    fseek(input_file, 0, SEEK_END);
-    long file_size = ftell(input_file);
-    fseek(input_file, 0, SEEK_SET);
+    // Используем функцию stat для определения размера входного файла
+    struct stat st;
+    if(stat(argv[2], &st) != 0) {
+        perror("Не удалось установить размер файлов");
+        fclose(input_file);
+        fclose(output_file);
+        return 1;
+    }
+    size_t file_size = st.st_size; // используем size_t вместо long
 
+    // Выделяем память под входной текст
     char* input_text = (char*)malloc(file_size + 1);
     if(input_text == NULL) {
         fprintf(stderr, "Не удалось выделить память для входного текста\n");
@@ -232,11 +259,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    fread(input_text, 1, file_size, input_file);
-    input_text[file_size] = '\0';
+    // Читаем входной файл
+    size_t read_count = fread(input_text, 1, file_size, input_file);
+    if(read_count != file_size) {
+        perror("Ошибка чтения файла");
+        free(input_text);
+        fclose(input_file);
+        fclose(output_file);
+        return 1;
+    }
+    input_text[file_size] = '\0'; // добавляем завершающий нулевой символ
 
-    // Выделяем память для выходного текста, предполагаем худший случай, что каждый символ будет заменен на 2 байта
-    char* output_text = (char*)malloc(file_size * 4 + 1); // Каждый символ может взять до 4 байт
+    // Выделяем память под выходной текст
+    char* output_text = (char*)malloc(file_size * 4 + 1); 
     if(output_text == NULL) {
         fprintf(stderr, "Не удалось выделить память для выходного текста\n");
         free(input_text);
@@ -245,15 +280,25 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Конвертация текста и запись в выходной файл
+    // Выполняем конвертацию текста
     convert(argv[1], input_text, output_text);
-    fwrite(output_text, 1, strlen(output_text), output_file);
+    
+    // Записываем конвертированный текст в выходной файл
+    size_t write_count = fwrite(output_text, 1, strlen(output_text), output_file);
+    if(write_count != strlen(output_text)) {
+        perror("Ошибка записи в файл"); 
+        free(input_text);
+        free(output_text);
+        fclose(input_file);
+        fclose(output_file);
+        return 1;
+    }
 
-    // Очистка и закрытие ресурсов
+    // Освобождаем занятую память и закрываем файлы
     free(input_text);
     free(output_text);
     fclose(input_file);
     fclose(output_file);
 
-    return 0;
+    return 0;  // успешное завершение программы
 }
