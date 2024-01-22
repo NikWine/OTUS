@@ -1,89 +1,112 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Определение структуры для элемента списка
 typedef struct Element {
     long num;
     struct Element *nextElem;
 } Element;
 
-// Сформировать новый элемент списка.
+// Функция для создания нового элемента списка
 Element *createElem(long num, Element *nextElem) {
-    Element *elem = (Element *)malloc(sizeof(Element));
+    // Выделение памяти для нового элемента
+    Element *elem = (Element *) malloc(sizeof(Element));
+    // Проверка успешности выделения памяти
     if (!elem) {
-        exit(0);
+        fprintf(stderr, "Failed to allocate memory\n");
+        exit(EXIT_FAILURE);
     }
+    // Установка значений для элемента
     elem->num = num;
     elem->nextElem = nextElem;
     return elem;
 }
 
-// Функция, применяющая функцию печати ко всем элементам списка.
-void iterateAndApply(Element *elem, void (*print)(long)) {
-    while (elem) {
-        print(elem->num);
-        elem = elem->nextElem;
+// Функция для добавления нового элемента в начало списка
+Element *addElement(long num, Element *list) {
+    return createElem(num, list);
+}
+
+// Функция, применяющая функцию ко всем элементам списка
+void applyToEach(Element *list, void (*func)(long)) {
+    // Проходим по списку и применяем функцию к каждому элементу
+    while (list != NULL) {
+        func(list->num);
+        list = list->nextElem;
     }
     printf("\n");
 }
 
-// Функция проверки, является ли число нечетным.
-int oddCheck(long num) {
+// Функция для проверки, является ли число нечетным
+long check(long num) {
     return num & 1;
 }
 
-// Функция для создания нового списка, в который включены только элементы, удовлетворяющие условию проверки.
-Element *refineList(Element *elem, int (*check)(long)) {
-    Element *newlist = NULL;
-    Element **end = &newlist;
+// Функция для создания нового списка, в который включены только элементы, удовлетворяющие условию проверки
+Element *filter(Element *list, long (*func)(long)) {
+    Element *result = NULL;
+    Element *temp, *tail = NULL;
 
-    while (elem) {
-        if (check(elem->num)) {
-            *end = createElem(elem->num, NULL);
-            end = &((*end)->nextElem);
+    // Проходим по списку и проверяем каждый элемент
+    while (list != NULL) {
+        // Если элемент проходит проверку, добавляем его в новый список
+        if (func(list->num)) {
+            temp = createElem(list->num, NULL);
+
+            if (result == NULL) {
+                result = temp;
+            }
+            else {
+                tail->nextElem = temp;
+            }
+
+            tail = temp;
         }
-        elem = elem->nextElem;
+
+        list = list->nextElem;
     }
-    return newlist;
+
+    return result;
 }
 
-// Функция вывода длинного целого числа в консоль.
-void displayLong(long num) {
+// Функция для вывода числа
+void print(long num) {
     printf("%ld ", num);
 }
 
-long dataset[] = {4, 8, 15, 16, 23, 42};
-size_t dataset_length = sizeof(dataset) / sizeof(dataset[0]);
-
+// Главная функция программы
 int main() {
-    Element *list = NULL;
+    // Определение начального списка данных
+    long data[] = {4, 8, 15, 16, 23, 42};
+    size_t dataNum = sizeof(data) / sizeof(data[0]);
 
-    // Вставка элементов в список (в начале).
-    for (size_t i = dataset_length; i-- > 0; ) {
-        list = createElem(dataset[i], list);
+    // Создание нового списка
+    Element *list = NULL;
+    for (size_t i = 0; i < dataNum; i++) {
+        list = addElement(data[i], list);
     }
 
-    // Применить функцию displayLong к каждому элементу списка.
-    iterateAndApply(list, displayLong);
+    // Применение функции print ко всем элементам списка
+    applyToEach(list, print);
 
-    // Фильтровать список с условием oddCheck и создать новый список только с нечетными числами.
-    Element *refinedList = refineList(list, oddCheck);
+    // Создание нового списка, содержащего только нечетные элементы
+    Element *filteredList = filter(list, check);
 
-    // Применить функцию displayLong к каждому элементу отфильтрованного списка.
-    iterateAndApply(refinedList, displayLong);
+    // Применение функции print ко всем элементам отфильтрованного списка
+    applyToEach(filteredList, print);
 
-    // Освободить память, выделенную под список.
-    while (list) {
+    // Очистка памяти
+    while (list != NULL) {
         Element *temp = list;
         list = list->nextElem;
         free(temp);
     }
 
-    // Освободить память, выделенную под отфильтрованный список.
-    while (refinedList) {
-        Element *temp = refinedList;
-        refinedList = refinedList->nextElem;
+    while (filteredList != NULL) {
+        Element *temp = filteredList;
+        filteredList = filteredList->nextElem;
         free(temp);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
