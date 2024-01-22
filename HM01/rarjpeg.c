@@ -1,83 +1,71 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/wait.h>
 
 #define ZIP_MAGIC_HEADER "\x50\x4B\x03\x04"
 
+// Определение структуры заголовка ZIP
+struct zip_header {
+    char signature[4];
+    short version;
+    short flags;
+    short compression;
+    short mod_time;
+    short mod_date;
+    int crc32;
+    int compressed_size;
+    int uncompressed_size;
+    short filename_length;
+    short extra_field_length;
+};
+
 // Функция для проверки, является ли файл Rarjpeg
 int is_rarjpeg(const char *filename) {
-    // Открытие файла для чтения в бинарном режиме
     FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
+    if (!file) {
         perror("fopen");
         return 0;
     }
 
-    printf("In rarjpeg\n");
-
-    char header[4];
-    int position, i, sz;
-    // Определение размера файла
+    struct zip_header header;
+    size_t sz;
     fseek(file, 0L, SEEK_END);
     sz = ftell(file);
-    // Поиск заголовка ZIP со смещением в 4 байта
+
     fseek(file, 0, SEEK_SET);
-    for (i = 1; i < sz; i++) {
+    for (size_t i = 0; i < sz - sizeof(header); ++i) {
         fseek(file, i, SEEK_SET);
-        fread(header, 4, 1, file);
-        if (memcmp(header, ZIP_MAGIC_HEADER, 4) == 0) {
-            position=i;
-            printf("position %i", position);
+        fread(&header, sizeof(header), 1, file);
+        // Проверка подписи ZIP
+        if (memcmp(header.signature, ZIP_MAGIC_HEADER, 4) == 0) {
+            fseek(file, i + sizeof(header), SEEK_SET);
+            char* filename_in_zip = (char*) malloc(header.filename_length + 1);
+            fread(filename_in_zip, header.filename_length, 1, file);
+            filename_in_zip[header.filename_length] = '\0';  // Добавление конца строки
+            printf("%s\n", filename_in_zip);
+            free(filename_in_zip);
+            fclose(file);
             return 1;
         }
     }
 
+    fclose(file);
     return 0;
 }
 
-// Функция для получения списка файлов из RAR архива
-void list_rar_files(const char *filename) {
-    // Создание процесса
-    pid_t pid = fork();
-    
-    if (pid == -1) {
-        perror("fork");
-        exit(EXIT_FAILURE);
-    }
-    
-    // Испытательная работа извлекается в дочернем процессе
-    if (pid == 0) {
-        execlp("unzip", "unzip", "-lv", filename, NULL);
-        perror("exec");
-        exit(EXIT_FAILURE);
-    } 
-    // Родительский процесс считывает статус завершения дочернего процесса
-    else {
-        int status;
-        waitpid(pid, &status, 0);
-        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-            fprintf(stderr, "Process exited with error %d\n", WEXITSTATUS(status));
-            exit(EXIT_FAILURE);
-        }
-    }
-}
-
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Использование: %s <имя файла>\n", argv[0]);
-        return 1;
+    if (argc != 2) {
+        printf("Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
     const char *filename = argv[1];
 
     if (is_rarjpeg(filename)) {
-        printf("Файл '%s' является Rarjpeg.\nСодержимое RAR архива:\n", filename);
-        list_rar_files(filename);
+        printf("Файл '%s' является rarjpeg.\n", filename);
     } else {
-        printf("Файл '%s' не является Rarjpeg.\n", filename);
+        printf("Файл '%s' не является rarjpeg.\n", filename);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
