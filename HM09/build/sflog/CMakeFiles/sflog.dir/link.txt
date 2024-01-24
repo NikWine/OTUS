@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsflog.a  CMakeFiles/sflog.dir/sflog.c.o
+/usr/bin/ranlib libsflog.a

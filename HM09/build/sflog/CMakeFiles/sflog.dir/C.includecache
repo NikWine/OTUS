@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/u/Изображения/build09/sflog/sflog.c
+sflog.h
+/home/u/Изображения/build09/sflog/sflog.h
+execinfo.h
+-
+stdarg.h
+-
+threads.h
+-
+time.h
+-
+
+/home/u/Изображения/build09/sflog/sflog.h
+stdbool.h
+-
+stdio.h
+-
+unistd.h
+-
+

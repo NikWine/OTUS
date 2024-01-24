@@ -1,0 +1,1 @@
+/usr/bin/cc   -rdynamic CMakeFiles/test_sflog.dir/main.c.o  -o test_sflog  ../sflog/libsflog.a -lpthread 

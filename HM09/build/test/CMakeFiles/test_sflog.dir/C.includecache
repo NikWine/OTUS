@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/u/Изображения/build09/test/main.c
+errno.h
+/home/u/Изображения/build09/test/errno.h
+pthread.h
+/home/u/Изображения/build09/test/pthread.h
+sflog.h
+/home/u/Изображения/build09/test/sflog.h
+stdlib.h
+/home/u/Изображения/build09/test/stdlib.h
+string.h
+/home/u/Изображения/build09/test/string.h
+threads.h
+/home/u/Изображения/build09/test/threads.h
+
+sflog/sflog.h
+stdbool.h
+-
+stdio.h
+-
+unistd.h
+-
+

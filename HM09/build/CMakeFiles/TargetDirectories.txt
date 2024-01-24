@@ -1,0 +1,8 @@
+/home/u/Изображения/build09/CMakeFiles/rebuild_cache.dir
+/home/u/Изображения/build09/CMakeFiles/edit_cache.dir
+/home/u/Изображения/build09/sflog/CMakeFiles/rebuild_cache.dir
+/home/u/Изображения/build09/sflog/CMakeFiles/sflog.dir
+/home/u/Изображения/build09/sflog/CMakeFiles/edit_cache.dir
+/home/u/Изображения/build09/test/CMakeFiles/rebuild_cache.dir
+/home/u/Изображения/build09/test/CMakeFiles/test_sflog.dir
+/home/u/Изображения/build09/test/CMakeFiles/edit_cache.dir
