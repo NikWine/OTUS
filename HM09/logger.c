@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <execinfo.h>
 
 static FILE *log_file_ptr = NULL;
 
@@ -39,7 +40,20 @@ void log_message(LogLevel level, const char *file, int line, const char *functio
 
     // Для уровня ERROR выводим стек вызовов.
     if (level == ERROR) {
-        fprintf(log_file_ptr, "Стек вызовов не реализован.\n");
+        fprintf(log_file_ptr, "Стек вызовов:\n");
+        
+        void *call_stack[256];
+        int count = backtrace(call_stack, sizeof(call_stack) / sizeof(void *));
+        char **symbols = backtrace_symbols(call_stack, count);
+        if (symbols != NULL) {
+            for (int i = 0; i < count; i++) {
+                fprintf(log_file_ptr, "%s\n", symbols[i]);
+            }
+            fprintf(log_file_ptr, "\n");
+            free(symbols);
+        } else {
+            fprintf(log_file_ptr, "Ошибка при получении информации о стеке вызовов.\n");
+        }
     }
 
     fflush(log_file_ptr);
